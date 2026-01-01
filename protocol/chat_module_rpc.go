@@ -351,7 +351,7 @@ func (c *chatModuleRPCClient) RegisterWhenChatMsg(handler func(event *api.ChatMs
 	}
 
 	cbID := c.broker.NextId()
-	go c.broker.AcceptAndServe(cbID, &chatMsgCallbackServer{handler: handler})
+	go acceptAndServeMuxBroker(c.broker, cbID, &chatMsgCallbackServer{handler: handler})
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -388,7 +388,7 @@ func (c *chatModuleRPCClient) RegisterWhenReceiveMsgFromSenderNamed(name string,
 	}
 
 	cbID := c.broker.NextId()
-	go c.broker.AcceptAndServe(cbID, &chatMsgCallbackServer{handler: handler})
+	go acceptAndServeMuxBroker(c.broker, cbID, &chatMsgCallbackServer{handler: handler})
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -425,7 +425,7 @@ func (c *chatModuleRPCClient) InterceptNextMessage(name string, handler func(*ap
 		return nil, errors.New("chatModuleRPCClient.InterceptNextMessage: name is empty")
 	}
 	cbID := c.broker.NextId()
-	go c.broker.AcceptAndServe(cbID, &chatMsgCallbackServer{handler: handler})
+	go acceptAndServeMuxBroker(c.broker, cbID, &chatMsgCallbackServer{handler: handler})
 
 	c.mu.Lock()
 	var resp ChatModuleInterceptResp

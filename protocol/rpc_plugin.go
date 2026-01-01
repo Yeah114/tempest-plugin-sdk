@@ -107,8 +107,71 @@ func (s *frameRPCServer) GetModule(args *GetModuleArgs, resp *GetModuleResp) err
 	}
 	if chatMod, ok := any(mod).(api.ChatModule); ok {
 		id := s.broker.NextId()
-		go s.broker.AcceptAndServe(id, &ChatModuleRPCServer{Impl: chatMod, broker: s.broker})
+		go acceptAndServeMuxBroker(s.broker, id, &ChatModuleRPCServer{Impl: chatMod, broker: s.broker})
 		resp.ModuleKind = api.NameChatModule
+		resp.ModuleBrokerID = id
+		return nil
+	}
+	if cmdsMod, ok := any(mod).(api.CommandsModule); ok {
+		id := s.broker.NextId()
+		go acceptAndServeMuxBroker(s.broker, id, &CommandsModuleRPCServer{Impl: cmdsMod})
+		resp.ModuleKind = api.NameCommandsModule
+		resp.ModuleBrokerID = id
+		return nil
+	}
+	if flexMod, ok := any(mod).(api.FlexModule); ok {
+		id := s.broker.NextId()
+		go acceptAndServeMuxBroker(s.broker, id, &FlexModuleRPCServer{Impl: flexMod, broker: s.broker})
+		resp.ModuleKind = api.NameFlexModule
+		resp.ModuleBrokerID = id
+		return nil
+	}
+	if uqMod, ok := any(mod).(api.UQHolderModule); ok {
+		id := s.broker.NextId()
+		go acceptAndServeMuxBroker(s.broker, id, &UQHolderModuleRPCServer{Impl: uqMod})
+		resp.ModuleKind = api.NameUQHolderModule
+		resp.ModuleBrokerID = id
+		return nil
+	}
+	if gmMod, ok := any(mod).(api.GameMenuModule); ok {
+		id := s.broker.NextId()
+		go acceptAndServeMuxBroker(s.broker, id, &GameMenuModuleRPCServer{Impl: gmMod, broker: s.broker})
+		resp.ModuleKind = api.NameGameMenuModule
+		resp.ModuleBrokerID = id
+		return nil
+	}
+	if tmMod, ok := any(mod).(api.TerminalMenuModule); ok {
+		id := s.broker.NextId()
+		go acceptAndServeMuxBroker(s.broker, id, &TerminalMenuModuleRPCServer{Impl: tmMod, broker: s.broker})
+		resp.ModuleKind = api.NameTerminalMenuModule
+		resp.ModuleBrokerID = id
+		return nil
+	}
+	if terminalMod, ok := any(mod).(api.TerminalModule); ok {
+		id := s.broker.NextId()
+		go acceptAndServeMuxBroker(s.broker, id, &TerminalModuleRPCServer{Impl: terminalMod, broker: s.broker})
+		resp.ModuleKind = api.NameTerminalModule
+		resp.ModuleBrokerID = id
+		return nil
+	}
+	if playersMod, ok := any(mod).(api.PlayersModule); ok {
+		id := s.broker.NextId()
+		go acceptAndServeMuxBroker(s.broker, id, &PlayersModuleRPCServer{Impl: playersMod, broker: s.broker})
+		resp.ModuleKind = api.NamePlayersModule
+		resp.ModuleBrokerID = id
+		return nil
+	}
+	if loggerMod, ok := any(mod).(api.LoggerModule); ok {
+		id := s.broker.NextId()
+		go acceptAndServeMuxBroker(s.broker, id, &LoggerModuleRPCServer{Impl: loggerMod})
+		resp.ModuleKind = api.NameLoggerModule
+		resp.ModuleBrokerID = id
+		return nil
+	}
+	if spMod, ok := any(mod).(api.StoragePathModule); ok {
+		id := s.broker.NextId()
+		go acceptAndServeMuxBroker(s.broker, id, &StoragePathModuleRPCServer{Impl: spMod})
+		resp.ModuleKind = api.NameStoragePathModule
 		resp.ModuleBrokerID = id
 	}
 	return nil
@@ -161,6 +224,42 @@ func (c *frameRPCClient) GetModule(name string) (sdkdefine.Module, bool) {
 			switch resp.ModuleKind {
 			case api.NameChatModule:
 				if m := newChatModuleRPCClient(conn, c.broker); m != nil {
+					return m, true
+				}
+			case api.NameCommandsModule:
+				if m := newCommandsModuleRPCClient(conn); m != nil {
+					return m, true
+				}
+			case api.NameFlexModule:
+				if m := newFlexModuleRPCClient(conn, c.broker); m != nil {
+					return m, true
+				}
+			case api.NameUQHolderModule:
+				if m := newUQHolderModuleRPCClient(conn); m != nil {
+					return m, true
+				}
+			case api.NameGameMenuModule:
+				if m := newGameMenuModuleRPCClient(conn, c.broker); m != nil {
+					return m, true
+				}
+			case api.NameTerminalMenuModule:
+				if m := newTerminalMenuModuleRPCClient(conn, c.broker); m != nil {
+					return m, true
+				}
+			case api.NameTerminalModule:
+				if m := newTerminalModuleRPCClient(conn, c.broker); m != nil {
+					return m, true
+				}
+			case api.NamePlayersModule:
+				if m := newPlayersModuleRPCClient(conn, c.broker); m != nil {
+					return m, true
+				}
+			case api.NameLoggerModule:
+				if m := newLoggerModuleRPCClient(conn); m != nil {
+					return m, true
+				}
+			case api.NameStoragePathModule:
+				if m := newStoragePathModuleRPCClient(conn); m != nil {
 					return m, true
 				}
 			default:
@@ -216,7 +315,7 @@ func (c *rpcClient) Init(frame sdkdefine.Frame, config map[string]interface{}) e
 	var brokerID uint32
 	if c.broker != nil {
 		brokerID = c.broker.NextId()
-		go c.broker.AcceptAndServe(brokerID, &frameRPCServer{Frame: frame, broker: c.broker})
+		go acceptAndServeMuxBroker(c.broker, brokerID, &frameRPCServer{Frame: frame, broker: c.broker})
 	}
 	return c.c.Call("Plugin.Init", &InitArgs{Config: config, FrameBrokerID: brokerID}, &Empty{})
 }

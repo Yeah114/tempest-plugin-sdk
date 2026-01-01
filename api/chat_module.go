@@ -6,6 +6,7 @@ const NameChatModule = "chat"
 
 type ChatModule interface {
 	Name() string
+
 	RegisterWhenChatMsg(handler func(event *ChatMsg)) (string, error)
 	UnregisterWhenChatMsg(listenerID string) bool
 	RegisterWhenReceiveMsgFromSenderNamed(name string, handler func(event *ChatMsg)) (string, error)
