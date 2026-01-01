@@ -8,10 +8,9 @@ import (
 
 // Plugin
 type Plugin interface {
-	Init(frame define.Frame, config define.Config)
+	Init(frame define.Frame, config map[string]interface{})
 	Frame() (frame define.Frame)
-	Config() (config define.Config)
-	Metadata() (metadata define.Metadata)
+	Config() (config map[string]interface{})
 	Load(ctx context.Context) (err error)
 	Unload(ctx context.Context) (err error)
 }

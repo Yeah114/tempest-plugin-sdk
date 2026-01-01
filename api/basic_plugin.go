@@ -8,34 +8,26 @@ import (
 
 type BasicPlugin struct {
 	frame define.Frame
-	config define.Config
+	config map[string]interface{}
 }
 
-func (p BasicPlugin) Init(frame define.Frame, config define.Config) {
+func (p *BasicPlugin) Init(frame define.Frame, config map[string]interface{}) {
 	p.frame = frame
 	p.config = config
 }
 
-func (p BasicPlugin) Frame() (frame define.Frame) {
+func (p *BasicPlugin) Frame() (frame define.Frame) {
 	return p.frame
 }
 
-func (p BasicPlugin) Config() (config define.Config) {
+func (p *BasicPlugin) Config() (config map[string]interface{}) {
 	return p.config
 }
 
-func (p BasicPlugin) Metadata() (metadata define.Metadata) {
-	return define.Metadata{
-		Name:        "BasicPlugin",
-		Description: "test",
-		Author:      "tempest",
-	}
-}
-
-func (p BasicPlugin) Load(ctx context.Context) (err error) {
+func (p *BasicPlugin) Load(ctx context.Context) (err error) {
 	return
 }
 
-func (p BasicPlugin) Unload(ctx context.Context) (err error) {
+func (p *BasicPlugin) Unload(ctx context.Context) (err error) {
 	return
 }
