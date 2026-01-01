@@ -21,21 +21,24 @@ type HelloPlugin struct {
 }
 
 func (p *HelloPlugin) Load(_ context.Context) (err error) {
+	p.PluginTool = api.NewPluginTool(p)
+	p.TerminalMenuModule, _ = api.GetModule[api.TerminalMenuModule](p.Frame(), api.NameTerminalMenuModule)
+
 	err = mapstructure.Decode(p.Config(), &p.HelloPluginConfig)
 	if err != nil {
 		return fmt.Errorf("HelloPlugin.Load: 解析插件配置时发生错误: %v", err)
 	}
 
-	p.PluginTool = api.NewPluginTool(p)
-	p.TerminalMenuModule, _ = api.GetModule[api.TerminalMenuModule](p.Frame(), api.NameTerminalMenuModule)
-
-	_ = p.RegisterMenuEntry(&api.TerminalMenuEntry{
+	err = p.RegisterTerminalMenuEntry(&api.TerminalMenuEntry{
 		Triggers: []string{"hello"},
-		Usage: "打个招呼",
+		Usage:    "打个招呼",
 		OnTrigger: func(_ []string) {
 			p.Info(fmt.Sprintf("hello, %s!", p.UserName))
 		},
 	})
+	if err != nil {
+		return fmt.Errorf("HelloPlugin.Load: 注册终端菜单项时发生错误: %v", err)
+	}
 
 	return nil
 }

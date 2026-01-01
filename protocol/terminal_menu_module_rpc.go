@@ -250,8 +250,8 @@ type TerminalMenuModuleRPCServer struct {
 	Impl   api.TerminalMenuModule
 	broker *plugin.MuxBroker
 
-	mu           sync.Mutex
-	entrySeq     uint64
+	mu            sync.Mutex
+	entrySeq      uint64
 	entryTriggers map[string]func([]string)
 }
 
@@ -285,7 +285,7 @@ func (s *TerminalMenuModuleRPCServer) RegisterMenuEntry(args *TerminalMenuRegist
 	entry.OnTrigger = func(a []string) {
 		_ = cb.OnTrigger(a)
 	}
-	return s.Impl.RegisterMenuEntry(&entry)
+	return s.Impl.RegisterTerminalMenuEntry(&entry)
 }
 
 func (s *TerminalMenuModuleRPCServer) PublishTerminalCall(args *TerminalMenuLineEvent, _ *Empty) error {
@@ -475,7 +475,7 @@ func newTerminalMenuModuleRPCClient(conn net.Conn, broker *plugin.MuxBroker) api
 
 func (c *terminalMenuModuleRPCClient) Name() string { return api.NameTerminalMenuModule }
 
-func (c *terminalMenuModuleRPCClient) RegisterMenuEntry(entry *api.TerminalMenuEntry) error {
+func (c *terminalMenuModuleRPCClient) RegisterTerminalMenuEntry(entry *api.TerminalMenuEntry) error {
 	if c == nil || c.c == nil || c.broker == nil {
 		return errors.New("terminalMenuModuleRPCClient.RegisterMenuEntry: client is not initialised")
 	}

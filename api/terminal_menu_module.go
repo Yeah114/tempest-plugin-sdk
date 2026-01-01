@@ -22,7 +22,7 @@ type TerminalMenuEntry struct {
 type TerminalMenuModule interface {
 	Name() string
 
-	RegisterMenuEntry(entry *TerminalMenuEntry) error
+	RegisterTerminalMenuEntry(entry *TerminalMenuEntry) error
 	PublishTerminalCall(line string)
 	PublishPopBackendMenu()
 
@@ -35,4 +35,3 @@ type TerminalMenuModule interface {
 	RegisterWhenPopBackendMenu(handler func(struct{})) (string, error)
 	UnregisterWhenPopBackendMenu(listenerID string) bool
 }
-

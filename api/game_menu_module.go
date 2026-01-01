@@ -27,7 +27,7 @@ type GameMenuModule interface {
 	Name() string
 
 	// RegisterMenuEntry registers a new entry and returns its auto-assigned EntryID.
-	RegisterMenuEntry(entry *GameMenuEntry) (string, error)
+	RegisterGameMenuEntry(entry *GameMenuEntry) (string, error)
 	RemoveMenuEntry(entryID string)
 
 	// SubscribeEntries returns a channel that receives a replay of existing entries followed by future updates.

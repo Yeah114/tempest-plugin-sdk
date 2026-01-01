@@ -243,7 +243,7 @@ func (s *GameMenuModuleRPCServer) RegisterMenuEntry(args *GameMenuRegisterEntryA
 		}
 	}
 
-	entryID, err := s.Impl.RegisterMenuEntry(&entry)
+	entryID, err := s.Impl.RegisterGameMenuEntry(&entry)
 	if err != nil {
 		if cb != nil {
 			_ = cb.Close()
@@ -422,7 +422,7 @@ func newGameMenuModuleRPCClient(conn net.Conn, broker *plugin.MuxBroker) api.Gam
 
 func (c *gameMenuModuleRPCClient) Name() string { return api.NameGameMenuModule }
 
-func (c *gameMenuModuleRPCClient) RegisterMenuEntry(entry *api.GameMenuEntry) (string, error) {
+func (c *gameMenuModuleRPCClient) RegisterGameMenuEntry(entry *api.GameMenuEntry) (string, error) {
 	if c == nil || c.c == nil {
 		return "", errors.New("gameMenuModuleRPCClient.RegisterMenuEntry: client is not initialised")
 	}
