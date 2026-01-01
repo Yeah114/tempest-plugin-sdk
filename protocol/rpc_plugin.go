@@ -61,6 +61,15 @@ type GetModuleResp struct {
 	ModuleBrokerID uint32
 }
 
+type GetPluginConfigArgs struct {
+	ID string
+}
+
+type GetPluginConfigResp struct {
+	Exists bool
+	Config sdkdefine.PluginConfig
+}
+
 type frameRPCServer struct {
 	Frame  sdkdefine.Frame
 	broker *plugin.MuxBroker
@@ -178,6 +187,24 @@ func (s *frameRPCServer) GetModule(args *GetModuleArgs, resp *GetModuleResp) err
 	return nil
 }
 
+func (s *frameRPCServer) GetPluginConfig(args *GetPluginConfigArgs, resp *GetPluginConfigResp) error {
+	if resp == nil {
+		return nil
+	}
+	resp.Exists = false
+	resp.Config = sdkdefine.PluginConfig{}
+	if s == nil || s.Frame == nil || args == nil || args.ID == "" {
+		return nil
+	}
+	cfg, ok := s.Frame.GetPluginConfig(args.ID)
+	if !ok {
+		return nil
+	}
+	resp.Exists = true
+	resp.Config = cfg
+	return nil
+}
+
 type frameRPCClient struct {
 	c      *rpc.Client
 	broker *plugin.MuxBroker
@@ -270,6 +297,23 @@ func (c *frameRPCClient) GetModule(name string) (sdkdefine.Module, bool) {
 	}
 
 	return frameModuleStub{name: resp.Name}, true
+}
+
+func (c *frameRPCClient) GetPluginConfig(id string) (sdkdefine.PluginConfig, bool) {
+	if c == nil || c.c == nil || id == "" {
+		return sdkdefine.PluginConfig{}, false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var resp GetPluginConfigResp
+	if err := c.c.Call("Plugin.GetPluginConfig", &GetPluginConfigArgs{ID: id}, &resp); err != nil {
+		return sdkdefine.PluginConfig{}, false
+	}
+	if !resp.Exists {
+		return sdkdefine.PluginConfig{}, false
+	}
+	return resp.Config, true
 }
 
 func (s *rpcServer) Init(args *InitArgs, _ *Empty) error {
