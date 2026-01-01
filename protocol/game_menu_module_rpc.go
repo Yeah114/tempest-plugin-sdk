@@ -18,38 +18,66 @@ type GameMenuModuleNameResp struct {
 	Name string
 }
 
-type gameMenuEntryEvent struct {
-	Entry api.GameMenuEntry
+// GameMenuEntryWire is the RPC-safe representation of api.GameMenuEntry.
+// NOTE: api.GameMenuEntry contains a func field (OnTrigger) which is not gob-encodable.
+type GameMenuEntryWire struct {
+	Triggers     []string
+	ArgumentHint string
+	Usage        string
 }
 
-type gameMenuEntryCallbackServer struct {
+func toGameMenuEntryWire(entry *api.GameMenuEntry) GameMenuEntryWire {
+	if entry == nil {
+		return GameMenuEntryWire{}
+	}
+	return GameMenuEntryWire{
+		Triggers:     append([]string(nil), entry.Triggers...),
+		ArgumentHint: entry.ArgumentHint,
+		Usage:        entry.Usage,
+	}
+}
+
+func fromGameMenuEntryWire(w GameMenuEntryWire) api.GameMenuEntry {
+	return api.GameMenuEntry{
+		Triggers:     append([]string(nil), w.Triggers...),
+		ArgumentHint: w.ArgumentHint,
+		Usage:        w.Usage,
+	}
+}
+
+type GameMenuEntryEvent struct {
+	Info api.GameMenuEntryInfo
+}
+
+type GameMenuEntryCallbackServer struct {
 	mu     sync.Mutex
 	closed bool
-	ch     chan<- *api.GameMenuEntry
+	ch     chan<- *api.GameMenuEntryInfo
 }
 
-func (s *gameMenuEntryCallbackServer) OnEntry(args *gameMenuEntryEvent, _ *Empty) error {
+func (s *GameMenuEntryCallbackServer) OnEntry(args *GameMenuEntryEvent, _ *Empty) error {
 	if s == nil {
 		return nil
 	}
-	var entry *api.GameMenuEntry
+	var info *api.GameMenuEntryInfo
 	if args != nil {
-		e := args.Entry
-		entry = &e
+		clean := args.Info
+		clean.Triggers = append([]string(nil), clean.Triggers...)
+		info = &clean
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.closed || s.ch == nil || entry == nil {
+	if s.closed || s.ch == nil || info == nil {
 		return nil
 	}
 	select {
-	case s.ch <- entry:
+	case s.ch <- info:
 	default:
 	}
 	return nil
 }
 
-func (s *gameMenuEntryCallbackServer) Stop(_ *Empty, _ *Empty) error {
+func (s *GameMenuEntryCallbackServer) Stop(_ *Empty, _ *Empty) error {
 	if s == nil {
 		return nil
 	}
@@ -66,12 +94,12 @@ func (s *gameMenuEntryCallbackServer) Stop(_ *Empty, _ *Empty) error {
 	return nil
 }
 
-type gameMenuEntryCallbackClient struct {
+type GameMenuEntryCallbackClient struct {
 	c  *rpc.Client
 	mu sync.Mutex
 }
 
-func (c *gameMenuEntryCallbackClient) Close() error {
+func (c *GameMenuEntryCallbackClient) Close() error {
 	if c == nil || c.c == nil {
 		return nil
 	}
@@ -80,16 +108,18 @@ func (c *gameMenuEntryCallbackClient) Close() error {
 	return c.c.Close()
 }
 
-func (c *gameMenuEntryCallbackClient) OnEntry(entry *api.GameMenuEntry) error {
-	if c == nil || c.c == nil || entry == nil {
+func (c *GameMenuEntryCallbackClient) OnEntry(info *api.GameMenuEntryInfo) error {
+	if c == nil || c.c == nil || info == nil {
 		return nil
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.c.Call("Plugin.OnEntry", &gameMenuEntryEvent{Entry: *entry}, &Empty{})
+	clean := *info
+	clean.Triggers = append([]string(nil), info.Triggers...)
+	return c.c.Call("Plugin.OnEntry", &GameMenuEntryEvent{Info: clean}, &Empty{})
 }
 
-func (c *gameMenuEntryCallbackClient) Stop() {
+func (c *GameMenuEntryCallbackClient) Stop() {
 	if c == nil || c.c == nil {
 		return
 	}
@@ -98,32 +128,28 @@ func (c *gameMenuEntryCallbackClient) Stop() {
 	_ = c.c.Call("Plugin.Stop", &Empty{}, &Empty{})
 }
 
-type gameMenuTriggerEvent struct {
-	ChatJSON []byte
+type GameMenuTriggerEvent struct {
+	Chat *api.ChatMsg
 }
 
-type gameMenuTriggerCallbackServer struct {
-	handler func([]byte)
+type GameMenuTriggerCallbackServer struct {
+	handler func(chat *api.ChatMsg)
 }
 
-func (s *gameMenuTriggerCallbackServer) OnTrigger(args *gameMenuTriggerEvent, _ *Empty) error {
+func (s *GameMenuTriggerCallbackServer) OnTrigger(args *GameMenuTriggerEvent, _ *Empty) error {
 	if s == nil || s.handler == nil {
 		return nil
 	}
-	var payload []byte
-	if args != nil && args.ChatJSON != nil {
-		payload = append([]byte(nil), args.ChatJSON...)
-	}
-	s.handler(payload)
+	s.handler(sanitizeChatMsgForRPC(nilSafeChatMsg(args)))
 	return nil
 }
 
-type gameMenuTriggerCallbackClient struct {
+type GameMenuTriggerCallbackClient struct {
 	c  *rpc.Client
 	mu sync.Mutex
 }
 
-func (c *gameMenuTriggerCallbackClient) Close() error {
+func (c *GameMenuTriggerCallbackClient) Close() error {
 	if c == nil || c.c == nil {
 		return nil
 	}
@@ -132,21 +158,26 @@ func (c *gameMenuTriggerCallbackClient) Close() error {
 	return c.c.Close()
 }
 
-func (c *gameMenuTriggerCallbackClient) OnTrigger(chatJSON []byte) error {
+func (c *GameMenuTriggerCallbackClient) OnTrigger(chat *api.ChatMsg) error {
 	if c == nil || c.c == nil {
 		return nil
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.c.Call("Plugin.OnTrigger", &gameMenuTriggerEvent{ChatJSON: append([]byte(nil), chatJSON...)}, &Empty{})
+	return c.c.Call("Plugin.OnTrigger", &GameMenuTriggerEvent{Chat: sanitizeChatMsgForRPC(chat)}, &Empty{})
 }
 
-type GameMenuRegisterArgs struct {
-	Entry *api.GameMenuEntry
+type GameMenuRegisterEntryArgs struct {
+	Entry           GameMenuEntryWire
+	TriggerBrokerID uint32
+}
+
+type GameMenuRegisterEntryResp struct {
+	EntryID string
 }
 
 type GameMenuRemoveArgs struct {
-	ID string
+	EntryID string
 }
 
 type GameMenuSubscribeArgs struct {
@@ -161,14 +192,9 @@ type GameMenuUnsubscribeArgs struct {
 	SubID string
 }
 
-type GameMenuRegisterTriggerArgs struct {
-	ID               string
-	CallbackBrokerID uint32
-}
-
 type GameMenuTriggerArgs struct {
-	ID      string
-	ChatJSON []byte
+	EntryID string
+	Chat    *api.ChatMsg
 }
 
 type GameMenuModuleRPCServer struct {
@@ -177,11 +203,11 @@ type GameMenuModuleRPCServer struct {
 
 	mu           sync.Mutex
 	subs         map[string]context.CancelFunc
-	subCallbacks map[string]*gameMenuEntryCallbackClient
+	subCallbacks map[string]*GameMenuEntryCallbackClient
 	subSeq       uint64
 
 	triggerMu        sync.Mutex
-	triggerCallbacks map[string]*gameMenuTriggerCallbackClient
+	triggerCallbacks map[string]*GameMenuTriggerCallbackClient
 }
 
 func (s *GameMenuModuleRPCServer) Name(_ *Empty, resp *GameMenuModuleNameResp) error {
@@ -196,18 +222,67 @@ func (s *GameMenuModuleRPCServer) Name(_ *Empty, resp *GameMenuModuleNameResp) e
 	return nil
 }
 
-func (s *GameMenuModuleRPCServer) RegisterMenuEntry(args *GameMenuRegisterArgs, _ *Empty) error {
+func (s *GameMenuModuleRPCServer) RegisterMenuEntry(args *GameMenuRegisterEntryArgs, resp *GameMenuRegisterEntryResp) error {
+	if resp != nil {
+		resp.EntryID = ""
+	}
 	if s == nil || s.Impl == nil || args == nil {
 		return nil
 	}
-	return s.Impl.RegisterMenuEntry(args.Entry)
+	entry := fromGameMenuEntryWire(args.Entry)
+
+	cb := (*GameMenuTriggerCallbackClient)(nil)
+	if args.TriggerBrokerID != 0 && s.broker != nil {
+		conn, err := s.broker.Dial(args.TriggerBrokerID)
+		if err != nil {
+			return err
+		}
+		cb = &GameMenuTriggerCallbackClient{c: rpc.NewClient(conn)}
+		entry.OnTrigger = func(chat *api.ChatMsg) {
+			_ = cb.OnTrigger(chat)
+		}
+	}
+
+	entryID, err := s.Impl.RegisterMenuEntry(&entry)
+	if err != nil {
+		if cb != nil {
+			_ = cb.Close()
+		}
+		return err
+	}
+	if cb != nil {
+		s.triggerMu.Lock()
+		if s.triggerCallbacks == nil {
+			s.triggerCallbacks = make(map[string]*GameMenuTriggerCallbackClient)
+		}
+		old := s.triggerCallbacks[entryID]
+		s.triggerCallbacks[entryID] = cb
+		s.triggerMu.Unlock()
+		if old != nil {
+			_ = old.Close()
+		}
+	}
+	if resp != nil {
+		resp.EntryID = entryID
+	}
+	return nil
 }
 
 func (s *GameMenuModuleRPCServer) RemoveMenuEntry(args *GameMenuRemoveArgs, _ *Empty) error {
 	if s == nil || s.Impl == nil || args == nil {
 		return nil
 	}
-	s.Impl.RemoveMenuEntry(args.ID)
+	s.Impl.RemoveMenuEntry(args.EntryID)
+	s.triggerMu.Lock()
+	cb := (*GameMenuTriggerCallbackClient)(nil)
+	if s.triggerCallbacks != nil {
+		cb = s.triggerCallbacks[args.EntryID]
+		delete(s.triggerCallbacks, args.EntryID)
+	}
+	s.triggerMu.Unlock()
+	if cb != nil {
+		_ = cb.Close()
+	}
 	return nil
 }
 
@@ -223,7 +298,7 @@ func (s *GameMenuModuleRPCServer) SubscribeEntries(args *GameMenuSubscribeArgs, 
 	if err != nil {
 		return err
 	}
-	cb := &gameMenuEntryCallbackClient{c: rpc.NewClient(conn)}
+	cb := &GameMenuEntryCallbackClient{c: rpc.NewClient(conn)}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ch, stop, err := s.Impl.SubscribeEntries(ctx)
@@ -243,7 +318,7 @@ func (s *GameMenuModuleRPCServer) SubscribeEntries(args *GameMenuSubscribeArgs, 
 		s.subs = make(map[string]context.CancelFunc)
 	}
 	if s.subCallbacks == nil {
-		s.subCallbacks = make(map[string]*gameMenuEntryCallbackClient)
+		s.subCallbacks = make(map[string]*GameMenuEntryCallbackClient)
 	}
 	s.subs[subID] = func() {
 		stop()
@@ -269,11 +344,14 @@ func (s *GameMenuModuleRPCServer) SubscribeEntries(args *GameMenuSubscribeArgs, 
 			select {
 			case <-ctx.Done():
 				return
-			case entry, ok := <-ch:
+			case info, ok := <-ch:
 				if !ok {
 					return
 				}
-				_ = cb.OnEntry(entry)
+				if info == nil {
+					continue
+				}
+				_ = cb.OnEntry(info)
 			}
 		}
 	}()
@@ -296,7 +374,7 @@ func (s *GameMenuModuleRPCServer) UnsubscribeEntries(args *GameMenuUnsubscribeAr
 		cancel = s.subs[args.SubID]
 		delete(s.subs, args.SubID)
 	}
-	cb := (*gameMenuEntryCallbackClient)(nil)
+	cb := (*GameMenuEntryCallbackClient)(nil)
 	if s.subCallbacks != nil {
 		cb = s.subCallbacks[args.SubID]
 		delete(s.subCallbacks, args.SubID)
@@ -318,69 +396,11 @@ func (s *GameMenuModuleRPCServer) UnsubscribeEntries(args *GameMenuUnsubscribeAr
 	return nil
 }
 
-func (s *GameMenuModuleRPCServer) RegisterTriggerHandler(args *GameMenuRegisterTriggerArgs, _ *Empty) error {
-	if s == nil || s.Impl == nil || s.broker == nil || args == nil {
-		return nil
-	}
-	if args.ID == "" {
-		return errors.New("GameMenuModuleRPCServer.RegisterTriggerHandler: id is empty")
-	}
-	if args.CallbackBrokerID == 0 {
-		return errors.New("GameMenuModuleRPCServer.RegisterTriggerHandler: callback broker id is 0")
-	}
-
-	conn, err := s.broker.Dial(args.CallbackBrokerID)
-	if err != nil {
-		return err
-	}
-	cb := &gameMenuTriggerCallbackClient{c: rpc.NewClient(conn)}
-
-	if err := s.Impl.RegisterTriggerHandler(args.ID, func(chatJSON []byte) {
-		_ = cb.OnTrigger(chatJSON)
-	}); err != nil {
-		_ = cb.Close()
-		return err
-	}
-
-	s.triggerMu.Lock()
-	if s.triggerCallbacks == nil {
-		s.triggerCallbacks = make(map[string]*gameMenuTriggerCallbackClient)
-	}
-	old := s.triggerCallbacks[args.ID]
-	s.triggerCallbacks[args.ID] = cb
-	s.triggerMu.Unlock()
-	if old != nil {
-		_ = old.Close()
-	}
-	return nil
-}
-
-func (s *GameMenuModuleRPCServer) RemoveTriggerHandler(args *GameMenuRemoveArgs, _ *Empty) error {
-	if s == nil || s.Impl == nil || args == nil {
-		return nil
-	}
-	if args.ID == "" {
-		return nil
-	}
-	s.Impl.RemoveTriggerHandler(args.ID)
-	s.triggerMu.Lock()
-	cb := (*gameMenuTriggerCallbackClient)(nil)
-	if s.triggerCallbacks != nil {
-		cb = s.triggerCallbacks[args.ID]
-		delete(s.triggerCallbacks, args.ID)
-	}
-	s.triggerMu.Unlock()
-	if cb != nil {
-		_ = cb.Close()
-	}
-	return nil
-}
-
 func (s *GameMenuModuleRPCServer) TriggerEntry(args *GameMenuTriggerArgs, _ *Empty) error {
 	if s == nil || s.Impl == nil || args == nil {
 		return nil
 	}
-	s.Impl.TriggerEntry(args.ID, args.ChatJSON)
+	s.Impl.TriggerEntry(args.EntryID, args.Chat)
 	return nil
 }
 
@@ -402,25 +422,40 @@ func newGameMenuModuleRPCClient(conn net.Conn, broker *plugin.MuxBroker) api.Gam
 
 func (c *gameMenuModuleRPCClient) Name() string { return api.NameGameMenuModule }
 
-func (c *gameMenuModuleRPCClient) RegisterMenuEntry(entry *api.GameMenuEntry) error {
+func (c *gameMenuModuleRPCClient) RegisterMenuEntry(entry *api.GameMenuEntry) (string, error) {
 	if c == nil || c.c == nil {
-		return errors.New("gameMenuModuleRPCClient.RegisterMenuEntry: client is not initialised")
+		return "", errors.New("gameMenuModuleRPCClient.RegisterMenuEntry: client is not initialised")
 	}
+	if entry == nil {
+		return "", errors.New("gameMenuModuleRPCClient.RegisterMenuEntry: entry is nil")
+	}
+
+	var cbID uint32
+	if entry.OnTrigger != nil && c.broker != nil {
+		cbID = c.broker.NextId()
+		go acceptAndServeMuxBroker(c.broker, cbID, &GameMenuTriggerCallbackServer{handler: entry.OnTrigger})
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.c.Call("Plugin.RegisterMenuEntry", &GameMenuRegisterArgs{Entry: entry}, &Empty{})
+	var resp GameMenuRegisterEntryResp
+	err := c.c.Call("Plugin.RegisterMenuEntry", &GameMenuRegisterEntryArgs{Entry: toGameMenuEntryWire(entry), TriggerBrokerID: cbID}, &resp)
+	if err != nil {
+		return "", err
+	}
+	return resp.EntryID, nil
 }
 
-func (c *gameMenuModuleRPCClient) RemoveMenuEntry(id string) {
+func (c *gameMenuModuleRPCClient) RemoveMenuEntry(entryID string) {
 	if c == nil || c.c == nil {
 		return
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	_ = c.c.Call("Plugin.RemoveMenuEntry", &GameMenuRemoveArgs{ID: id}, &Empty{})
+	_ = c.c.Call("Plugin.RemoveMenuEntry", &GameMenuRemoveArgs{EntryID: entryID}, &Empty{})
 }
 
-func (c *gameMenuModuleRPCClient) SubscribeEntries(ctx context.Context) (<-chan *api.GameMenuEntry, func(), error) {
+func (c *gameMenuModuleRPCClient) SubscribeEntries(ctx context.Context) (<-chan *api.GameMenuEntryInfo, func(), error) {
 	if c == nil || c.c == nil || c.broker == nil {
 		return nil, nil, errors.New("gameMenuModuleRPCClient.SubscribeEntries: client is not initialised")
 	}
@@ -428,9 +463,9 @@ func (c *gameMenuModuleRPCClient) SubscribeEntries(ctx context.Context) (<-chan 
 		ctx = context.Background()
 	}
 
-	out := make(chan *api.GameMenuEntry, 64)
+	out := make(chan *api.GameMenuEntryInfo, 64)
 	cbID := c.broker.NextId()
-	cbSrv := &gameMenuEntryCallbackServer{ch: out}
+	cbSrv := &GameMenuEntryCallbackServer{ch: out}
 	go acceptAndServeMuxBroker(c.broker, cbID, cbSrv)
 
 	c.mu.Lock()
@@ -462,39 +497,34 @@ func (c *gameMenuModuleRPCClient) SubscribeEntries(ctx context.Context) (<-chan 
 	return out, cancel, nil
 }
 
-func (c *gameMenuModuleRPCClient) RegisterTriggerHandler(id string, handler func(chatJSON []byte)) error {
-	if c == nil || c.c == nil || c.broker == nil {
-		return errors.New("gameMenuModuleRPCClient.RegisterTriggerHandler: client is not initialised")
-	}
-	if id == "" {
-		return errors.New("gameMenuModuleRPCClient.RegisterTriggerHandler: id is empty")
-	}
-	if handler == nil {
-		return errors.New("gameMenuModuleRPCClient.RegisterTriggerHandler: handler is nil")
-	}
-
-	cbID := c.broker.NextId()
-	go acceptAndServeMuxBroker(c.broker, cbID, &gameMenuTriggerCallbackServer{handler: handler})
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.c.Call("Plugin.RegisterTriggerHandler", &GameMenuRegisterTriggerArgs{ID: id, CallbackBrokerID: cbID}, &Empty{})
-}
-
-func (c *gameMenuModuleRPCClient) RemoveTriggerHandler(id string) {
+func (c *gameMenuModuleRPCClient) TriggerEntry(entryID string, chat *api.ChatMsg) {
 	if c == nil || c.c == nil {
 		return
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	_ = c.c.Call("Plugin.RemoveTriggerHandler", &GameMenuRemoveArgs{ID: id}, &Empty{})
+	_ = c.c.Call("Plugin.TriggerEntry", &GameMenuTriggerArgs{EntryID: entryID, Chat: sanitizeChatMsgForRPC(chat)}, &Empty{})
 }
 
-func (c *gameMenuModuleRPCClient) TriggerEntry(id string, chatJSON []byte) {
-	if c == nil || c.c == nil {
-		return
+var _ api.GameMenuModule = (*gameMenuModuleRPCClient)(nil)
+
+func nilSafeChatMsg(args *GameMenuTriggerEvent) *api.ChatMsg {
+	if args == nil {
+		return nil
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	_ = c.c.Call("Plugin.TriggerEntry", &GameMenuTriggerArgs{ID: id, ChatJSON: chatJSON}, &Empty{})
+	return args.Chat
+}
+
+func sanitizeChatMsgForRPC(chat *api.ChatMsg) *api.ChatMsg {
+	if chat == nil {
+		return nil
+	}
+	out := *chat
+	out.Msg = append([]string(nil), chat.Msg...)
+	out.RawParameters = append([]string(nil), chat.RawParameters...)
+	out.UD = chat.UD
+	out.UD.Msg = append([]string(nil), chat.UD.Msg...)
+	out.UD.RawParameters = append([]string(nil), chat.UD.RawParameters...)
+	out.UD.Aux = nil
+	return &out
 }
