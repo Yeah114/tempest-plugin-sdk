@@ -14,7 +14,7 @@ import (
 // RPCPlugin is the minimal surface exposed over go-plugin for api.Plugin.
 // It intentionally only supports Init/Load/Unload to keep the protocol small.
 type RPCPlugin interface {
-	Init(frame sdkdefine.Frame, config map[string]interface{}) error
+	Init(frame sdkdefine.Frame, id string, config map[string]interface{}) error
 	Load() error
 	Unload() error
 }
@@ -28,6 +28,7 @@ type DynamicRPCPlugin struct {
 }
 
 type InitArgs struct {
+	ID            string
 	Config        map[string]interface{}
 	FrameBrokerID uint32
 }
@@ -54,9 +55,9 @@ type GetModuleArgs struct {
 }
 
 type GetModuleResp struct {
-	Exists        bool
-	Name          string
-	ModuleKind    string
+	Exists         bool
+	Name           string
+	ModuleKind     string
 	ModuleBrokerID uint32
 }
 
@@ -275,9 +276,13 @@ func (s *rpcServer) Init(args *InitArgs, _ *Empty) error {
 	if s == nil || s.Impl == nil {
 		return nil
 	}
+	id := ""
 	cfg := map[string]interface{}{}
-	if args != nil && args.Config != nil {
-		cfg = args.Config
+	if args != nil {
+		id = args.ID
+		if args.Config != nil {
+			cfg = args.Config
+		}
 	}
 	var frame sdkdefine.Frame
 	if args != nil && args.FrameBrokerID != 0 && s.broker != nil {
@@ -285,7 +290,7 @@ func (s *rpcServer) Init(args *InitArgs, _ *Empty) error {
 			frame = &frameRPCClient{c: rpc.NewClient(conn), broker: s.broker}
 		}
 	}
-	s.Impl.Init(frame, cfg)
+	s.Impl.Init(frame, id, cfg)
 	return nil
 }
 
@@ -308,7 +313,7 @@ type rpcClient struct {
 	broker *plugin.MuxBroker
 }
 
-func (c *rpcClient) Init(frame sdkdefine.Frame, config map[string]interface{}) error {
+func (c *rpcClient) Init(frame sdkdefine.Frame, id string, config map[string]interface{}) error {
 	if c == nil || c.c == nil {
 		return nil
 	}
@@ -317,7 +322,7 @@ func (c *rpcClient) Init(frame sdkdefine.Frame, config map[string]interface{}) e
 		brokerID = c.broker.NextId()
 		go acceptAndServeMuxBroker(c.broker, brokerID, &frameRPCServer{Frame: frame, broker: c.broker})
 	}
-	return c.c.Call("Plugin.Init", &InitArgs{Config: config, FrameBrokerID: brokerID}, &Empty{})
+	return c.c.Call("Plugin.Init", &InitArgs{ID: id, Config: config, FrameBrokerID: brokerID}, &Empty{})
 }
 
 func (c *rpcClient) Load() error {
