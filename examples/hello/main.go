@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Yeah114/tempest/tempest-plugin-sdk/api"
-	"github.com/Yeah114/tempest/tempest-plugin-sdk/protocol"
+	"github.com/Yeah114/tempest-plugin-sdk/api"
+	"github.com/Yeah114/tempest-plugin-sdk/protocol"
 )
 
 type HelloPlugin struct {

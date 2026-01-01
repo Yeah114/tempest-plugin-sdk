@@ -3,7 +3,7 @@ package protocol
 import (
 	"github.com/hashicorp/go-plugin"
 
-	"github.com/Yeah114/tempest/tempest-plugin-sdk/api"
+	"github.com/Yeah114/tempest-plugin-sdk/api"
 )
 
 // Serve starts a go-plugin server for the provided plugin implementation.

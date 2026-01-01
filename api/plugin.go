@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 
-	"github.com/Yeah114/tempest/tempest-plugin-sdk/define"
+	"github.com/Yeah114/tempest-plugin-sdk/define"
 )
 
 // Plugin

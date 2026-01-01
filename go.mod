@@ -1,4 +1,4 @@
-module github.com/Yeah114/tempest/tempest-plugin-sdk
+module github.com/Yeah114/tempest-plugin-sdk
 
 go 1.25.5
 
