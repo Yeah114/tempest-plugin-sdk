@@ -1,12 +1,12 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	"context"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/Yeah114/tempest-plugin-sdk/api"
 	"github.com/Yeah114/tempest-plugin-sdk/protocol"
-	"github.com/mitchellh/mapstructure"
 )
 
 type HelloPluginConfig struct {
