@@ -26,6 +26,10 @@ func (t *PluginTool) Print(level Level, msg string) {
 	t.terminalModule.Print(level, t.Name(), msg)
 }
 
+func (t *PluginTool) ColorTransANSI(msg string) string {
+	return t.terminalModule.ColorTransANSI(msg)
+}
+
 func (t *PluginTool) Info(msg string) {
 	t.terminalModule.Info(t.Name(), msg)
 }

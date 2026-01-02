@@ -26,7 +26,8 @@ type TerminalModule interface {
 	Success(scope string, msg string)
 	Raw(msg string)
 
+	ColorTransANSI(msg string) string
+
 	SubscribeLines(ctx context.Context) (<-chan string, error)
 	InterceptNextLine(ctx context.Context, timeout time.Duration, handler func(string)) (func(), error)
 }
-

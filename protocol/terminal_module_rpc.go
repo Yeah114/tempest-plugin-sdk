@@ -109,6 +109,14 @@ type TerminalRawArgs struct {
 	Msg string
 }
 
+type TerminalColorTransArgs struct {
+	Msg string
+}
+
+type TerminalColorTransResp struct {
+	Msg string
+}
+
 type TerminalSubscribeArgs struct {
 	CallbackBrokerID uint32
 }
@@ -206,6 +214,22 @@ func (s *TerminalModuleRPCServer) Raw(args *TerminalRawArgs, _ *Empty) error {
 		return nil
 	}
 	s.Impl.Raw(args.Msg)
+	return nil
+}
+
+func (s *TerminalModuleRPCServer) ColorTransANSI(args *TerminalColorTransArgs, resp *TerminalColorTransResp) error {
+	if resp == nil {
+		return nil
+	}
+	resp.Msg = ""
+	if s == nil || s.Impl == nil {
+		return nil
+	}
+	msg := ""
+	if args != nil {
+		msg = args.Msg
+	}
+	resp.Msg = s.Impl.ColorTransANSI(msg)
 	return nil
 }
 
@@ -458,6 +482,19 @@ func (c *terminalModuleRPCClient) Raw(msg string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	_ = c.c.Call("Plugin.Raw", &TerminalRawArgs{Msg: msg}, &Empty{})
+}
+
+func (c *terminalModuleRPCClient) ColorTransANSI(msg string) string {
+	if c == nil || c.c == nil {
+		return msg
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	resp := TerminalColorTransResp{Msg: msg}
+	if err := c.c.Call("Plugin.ColorTransANSI", &TerminalColorTransArgs{Msg: msg}, &resp); err != nil {
+		return msg
+	}
+	return resp.Msg
 }
 
 func (c *terminalModuleRPCClient) SubscribeLines(ctx context.Context) (<-chan string, error) {

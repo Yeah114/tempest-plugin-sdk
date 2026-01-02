@@ -70,6 +70,22 @@ type GetPluginConfigResp struct {
 	Config sdkdefine.PluginConfig
 }
 
+type RegisterWhenActivateArgs struct {
+	CallbackBrokerID uint32
+}
+
+type RegisterWhenActivateResp struct {
+	ListenerID string
+}
+
+type UnregisterWhenActivateArgs struct {
+	ListenerID string
+}
+
+type UnregisterWhenActivateResp struct {
+	OK bool
+}
+
 type frameRPCServer struct {
 	Frame  sdkdefine.Frame
 	broker *plugin.MuxBroker
@@ -205,10 +221,62 @@ func (s *frameRPCServer) GetPluginConfig(args *GetPluginConfigArgs, resp *GetPlu
 	return nil
 }
 
+func (s *frameRPCServer) RegisterWhenActivate(args *RegisterWhenActivateArgs, resp *RegisterWhenActivateResp) error {
+	if resp == nil {
+		return nil
+	}
+	resp.ListenerID = ""
+	if s == nil || s.Frame == nil || args == nil {
+		return nil
+	}
+	if s.broker == nil || args.CallbackBrokerID == 0 {
+		return nil
+	}
+
+	id, err := s.Frame.RegisterWhenActivate(func() {
+		conn, dialErr := s.broker.Dial(args.CallbackBrokerID)
+		if dialErr != nil || conn == nil {
+			return
+		}
+		client := rpc.NewClient(conn)
+		_ = client.Call("Plugin.Activate", &Empty{}, &Empty{})
+		_ = client.Close()
+	})
+	if err != nil {
+		return err
+	}
+	resp.ListenerID = id
+	return nil
+}
+
+func (s *frameRPCServer) UnregisterWhenActivate(args *UnregisterWhenActivateArgs, resp *UnregisterWhenActivateResp) error {
+	if resp == nil {
+		return nil
+	}
+	resp.OK = false
+	if s == nil || s.Frame == nil || args == nil || args.ListenerID == "" {
+		return nil
+	}
+	resp.OK = s.Frame.UnregisterWhenActivate(args.ListenerID)
+	return nil
+}
+
 type frameRPCClient struct {
 	c      *rpc.Client
 	broker *plugin.MuxBroker
 	mu     sync.Mutex
+}
+
+type activateCallbackRPCServer struct {
+	Handler func()
+}
+
+func (s *activateCallbackRPCServer) Activate(_ *Empty, _ *Empty) error {
+	if s == nil || s.Handler == nil {
+		return nil
+	}
+	s.Handler()
+	return nil
 }
 
 func (c *frameRPCClient) ListModules() map[string]sdkdefine.Module {
@@ -314,6 +382,42 @@ func (c *frameRPCClient) GetPluginConfig(id string) (sdkdefine.PluginConfig, boo
 		return sdkdefine.PluginConfig{}, false
 	}
 	return resp.Config, true
+}
+
+func (c *frameRPCClient) RegisterWhenActivate(handler func()) (string, error) {
+	if c == nil || c.c == nil || handler == nil {
+		return "", nil
+	}
+	if c.broker == nil {
+		return "", nil
+	}
+
+	brokerID := c.broker.NextId()
+	go acceptAndServeMuxBroker(c.broker, brokerID, &activateCallbackRPCServer{Handler: handler})
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var resp RegisterWhenActivateResp
+	if err := c.c.Call("Plugin.RegisterWhenActivate", &RegisterWhenActivateArgs{CallbackBrokerID: brokerID}, &resp); err != nil {
+		return "", err
+	}
+	return resp.ListenerID, nil
+}
+
+func (c *frameRPCClient) UnregisterWhenActivate(listenerID string) bool {
+	if c == nil || c.c == nil || listenerID == "" {
+		return false
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var resp UnregisterWhenActivateResp
+	if err := c.c.Call("Plugin.UnregisterWhenActivate", &UnregisterWhenActivateArgs{ListenerID: listenerID}, &resp); err != nil {
+		return false
+	}
+	return resp.OK
 }
 
 func (s *rpcServer) Init(args *InitArgs, _ *Empty) error {

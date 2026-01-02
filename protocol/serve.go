@@ -1,16 +1,18 @@
 package protocol
 
 import (
+	"os"
 	"sync"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 
 	"github.com/Yeah114/tempest-plugin-sdk/api"
 )
 
 var (
-	serveMu          sync.RWMutex
-	serveTestConfig  *plugin.ServeTestConfig
+	serveMu         sync.RWMutex
+	serveTestConfig *plugin.ServeTestConfig
 )
 
 // SetServeTestConfig enables go-plugin "test mode" for subsequent Serve calls.
@@ -43,6 +45,12 @@ func Serve(p api.Plugin) {
 		Plugins: map[string]plugin.Plugin{
 			PluginKey: &DynamicRPCPlugin{Impl: p},
 		},
+		// Silence go-plugin internal debug logs (e.g. "plugin address"), while keeping errors.
+		Logger: hclog.New(&hclog.LoggerOptions{
+			Name:   "plugin",
+			Level:  hclog.Error,
+			Output: os.Stderr,
+		}),
 	}
 	if tc := currentServeTestConfig(); tc != nil {
 		cfg.Test = tc
