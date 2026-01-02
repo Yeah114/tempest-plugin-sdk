@@ -25,4 +25,3 @@ func acceptAndServeMuxBroker(broker *plugin.MuxBroker, id uint32, v interface{})
 	}
 	srv.ServeConn(conn)
 }
-

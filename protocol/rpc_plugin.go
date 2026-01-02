@@ -194,6 +194,13 @@ func (s *frameRPCServer) GetModule(args *GetModuleArgs, resp *GetModuleResp) err
 		resp.ModuleBrokerID = id
 		return nil
 	}
+	if dbMod, ok := any(mod).(api.DatabaseModule); ok {
+		id := s.broker.NextId()
+		go acceptAndServeMuxBroker(s.broker, id, &DatabaseModuleRPCServer{Impl: dbMod, broker: s.broker})
+		resp.ModuleKind = api.NameDatabaseModule
+		resp.ModuleBrokerID = id
+		return nil
+	}
 	if spMod, ok := any(mod).(api.StoragePathModule); ok {
 		id := s.broker.NextId()
 		go acceptAndServeMuxBroker(s.broker, id, &StoragePathModuleRPCServer{Impl: spMod})
@@ -352,6 +359,10 @@ func (c *frameRPCClient) GetModule(name string) (sdkdefine.Module, bool) {
 				}
 			case api.NameLoggerModule:
 				if m := newLoggerModuleRPCClient(conn); m != nil {
+					return m, true
+				}
+			case api.NameDatabaseModule:
+				if m := newDatabaseModuleRPCClient(conn, c.broker); m != nil {
 					return m, true
 				}
 			case api.NameStoragePathModule:

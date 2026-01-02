@@ -21,4 +21,3 @@ type PlayersModule interface {
 	SubtitleTo(target string, subtitleMessage, titleMessage string) error
 	ActionBarTo(target string, message string) error
 }
-

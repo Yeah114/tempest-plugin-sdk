@@ -45,4 +45,3 @@ type CommandsModule interface {
 	SendChat(content string) error
 	Title(message string) error
 }
-

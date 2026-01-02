@@ -617,4 +617,3 @@ func (c *uqholderModuleRPCClient) call(method string, _ context.Context, args an
 }
 
 var _ api.UQHolderModule = (*uqholderModuleRPCClient)(nil)
-

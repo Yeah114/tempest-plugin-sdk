@@ -144,4 +144,3 @@ func (c *storagePathModuleRPCClient) CachePath(parts ...string) string {
 	out, _ := c.call("Plugin.CachePath", parts)
 	return out
 }
-

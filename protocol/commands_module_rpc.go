@@ -196,4 +196,3 @@ func (c *commandsModuleRPCClient) SendChat(content string) error {
 func (c *commandsModuleRPCClient) Title(message string) error {
 	return c.callNoResp("Plugin.Title", &CommandsTitleArgs{Message: message})
 }
-

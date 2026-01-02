@@ -22,4 +22,3 @@ type FlexModule interface {
 	Expose(apiName string, handler func(context.Context, []byte) ([]byte, string)) (func(), error)
 	Call(ctx context.Context, apiName string, argsJSON []byte) ([]byte, string, error)
 }
-

@@ -80,10 +80,10 @@ type ChatModuleRPCServer struct {
 	mu        sync.Mutex
 	callbacks map[string]*chatMsgCallbackClient
 
-	interceptMu       sync.Mutex
-	interceptCancels  map[string]func()
+	interceptMu        sync.Mutex
+	interceptCancels   map[string]func()
 	interceptCallbacks map[string]*chatMsgCallbackClient
-	interceptSeq      uint64
+	interceptSeq       uint64
 }
 
 type ChatModuleNameResp struct {

@@ -3,9 +3,9 @@ package api
 import "github.com/Yeah114/tempest-plugin-sdk/define"
 
 type PluginTool struct {
-	config define.PluginConfig
+	config         define.PluginConfig
 	terminalModule TerminalModule
-	loggerModule LoggerModule
+	loggerModule   LoggerModule
 }
 
 func NewPluginTool(plugin Plugin) PluginTool {

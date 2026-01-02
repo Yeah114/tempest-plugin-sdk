@@ -17,13 +17,13 @@ type PlayersModuleNameResp struct {
 }
 
 type PlayersGetPlayerArgs struct {
-	UUID     string
-	Name     string
+	UUID      string
+	Name      string
 	TimeoutMs int64
 }
 
 type PlayersGetPlayerResp struct {
-	Exists       bool
+	Exists         bool
 	PlayerBrokerID uint32
 }
 
@@ -504,4 +504,3 @@ func (c *playersModuleRPCClient) ActionBarTo(target string, message string) erro
 }
 
 var _ api.PlayersModule = (*playersModuleRPCClient)(nil)
-

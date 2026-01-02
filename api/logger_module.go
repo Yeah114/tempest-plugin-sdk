@@ -13,4 +13,3 @@ type LoggerModule interface {
 	Error(scope, msg string)
 	Success(scope, msg string)
 }
-

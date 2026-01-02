@@ -39,7 +39,7 @@ type FlexPublishArgs struct {
 }
 
 type FlexSubscribeArgs struct {
-	Topic           string
+	Topic            string
 	CallbackBrokerID uint32
 }
 
@@ -91,8 +91,8 @@ func (c *flexTopicCallbackClient) OnEvent(payload []byte) error {
 }
 
 type FlexExposeArgs struct {
-	APIName          string
-	HandlerBrokerID  uint32
+	APIName         string
+	HandlerBrokerID uint32
 }
 
 type FlexExposeResp struct {
@@ -173,9 +173,9 @@ func (c *flexHandlerCallbackClient) Handle(timeoutMs int64, argsJSON []byte) ([]
 }
 
 type FlexCallArgs struct {
-	APIName    string
-	TimeoutMs  int64
-	ArgsJSON   []byte
+	APIName   string
+	TimeoutMs int64
+	ArgsJSON  []byte
 }
 
 type FlexCallResp struct {

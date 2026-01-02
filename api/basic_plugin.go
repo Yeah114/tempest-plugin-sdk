@@ -7,8 +7,8 @@ import (
 )
 
 type BasicPlugin struct {
-	frame define.Frame
-	id string
+	frame  define.Frame
+	id     string
 	config map[string]interface{}
 }
 

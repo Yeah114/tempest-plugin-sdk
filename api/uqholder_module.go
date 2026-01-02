@@ -40,4 +40,3 @@ type UQHolderModule interface {
 
 	ExtendRaw(ctx context.Context) (map[string]any, error)
 }
-

@@ -514,7 +514,9 @@ func (c *playerKitRPCClient) GetCanBuild(ctx context.Context) (bool, error) {
 func (c *playerKitRPCClient) SetCanBuild(ctx context.Context, allow bool) error {
 	return c.setBool("Plugin.SetCanBuild", ctx, allow)
 }
-func (c *playerKitRPCClient) GetCanDig(ctx context.Context) (bool, error) { return c.getBool("Plugin.GetCanDig", ctx) }
+func (c *playerKitRPCClient) GetCanDig(ctx context.Context) (bool, error) {
+	return c.getBool("Plugin.GetCanDig", ctx)
+}
 func (c *playerKitRPCClient) SetCanDig(ctx context.Context, allow bool) error {
 	return c.setBool("Plugin.SetCanDig", ctx, allow)
 }
@@ -548,7 +550,9 @@ func (c *playerKitRPCClient) GetCanUseOperatorCommands(ctx context.Context) (boo
 func (c *playerKitRPCClient) SetCanUseOperatorCommands(ctx context.Context, allow bool) error {
 	return c.setBool("Plugin.SetCanUseOperatorCommands", ctx, allow)
 }
-func (c *playerKitRPCClient) GetCanTeleport(ctx context.Context) (bool, error) { return c.getBool("Plugin.GetCanTeleport", ctx) }
+func (c *playerKitRPCClient) GetCanTeleport(ctx context.Context) (bool, error) {
+	return c.getBool("Plugin.GetCanTeleport", ctx)
+}
 
 func (c *playerKitRPCClient) SetCanTeleport(ctx context.Context, allow bool) (bool, error) {
 	if c == nil || c.c == nil {
@@ -608,7 +612,9 @@ func (c *playerKitRPCClient) GetEntityMetadata(ctx context.Context) (map[uint32]
 	return resp.Value, err
 }
 
-func (c *playerKitRPCClient) GetIsOP(ctx context.Context) (bool, error) { return c.getBool("Plugin.GetIsOP", ctx) }
+func (c *playerKitRPCClient) GetIsOP(ctx context.Context) (bool, error) {
+	return c.getBool("Plugin.GetIsOP", ctx)
+}
 func (c *playerKitRPCClient) GetOnline(ctx context.Context) (bool, error) {
 	return c.getBool("Plugin.GetOnline", ctx)
 }
@@ -691,4 +697,3 @@ func (c *playerKitRPCClient) callWithTimeout(method string, ctx context.Context,
 }
 
 var _ api.PlayerKit = (*playerKitRPCClient)(nil)
-

@@ -51,4 +51,3 @@ type PlayerKit interface {
 	Subtitle(subtitleMessage, titleMessage string) error
 	ActionBar(message string) error
 }
-
