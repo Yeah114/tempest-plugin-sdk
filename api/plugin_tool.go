@@ -3,6 +3,8 @@ package api
 import "github.com/Yeah114/tempest-plugin-sdk/define"
 
 type PluginTool struct {
+	frame          define.Frame
+	pluginID       string
 	config         define.PluginConfig
 	terminalModule TerminalModule
 	loggerModule   LoggerModule
@@ -12,6 +14,8 @@ func NewPluginTool(plugin Plugin) PluginTool {
 	t := PluginTool{}
 	frame := plugin.Frame()
 	id := plugin.ID()
+	t.frame = frame
+	t.pluginID = id
 	t.config, _ = frame.GetPluginConfig(id)
 	t.terminalModule, _ = GetModule[TerminalModule](frame, NameTerminalModule)
 	t.loggerModule, _ = GetModule[LoggerModule](frame, NameLoggerModule)
@@ -64,6 +68,20 @@ func (t *PluginTool) LogError(msg string) {
 
 func (t *PluginTool) LogSuccess(msg string) {
 	t.loggerModule.Success(t.Name(), msg)
+}
+
+func (t *PluginTool) UpgradePluginConfig(config map[string]interface{}) error {
+	if t == nil || t.frame == nil || t.pluginID == "" {
+		return nil
+	}
+	return t.frame.UpgradePluginConfig(t.pluginID, config)
+}
+
+func (t *PluginTool) UpgradePluginFullConfig(config define.PluginConfig) error {
+	if t == nil || t.frame == nil || t.pluginID == "" {
+		return nil
+	}
+	return t.frame.UpgradePluginFullConfig(t.pluginID, config)
 }
 
 type PluginModuleTool struct {

@@ -70,6 +70,20 @@ type GetPluginConfigResp struct {
 	Config sdkdefine.PluginConfig
 }
 
+type UpgradePluginConfigArgs struct {
+	ID     string
+	Config map[string]interface{}
+}
+
+type UpgradePluginConfigResp struct{}
+
+type UpgradePluginFullConfigArgs struct {
+	ID     string
+	Config sdkdefine.PluginConfig
+}
+
+type UpgradePluginFullConfigResp struct{}
+
 type RegisterWhenActivateArgs struct {
 	CallbackBrokerID uint32
 }
@@ -226,6 +240,22 @@ func (s *frameRPCServer) GetPluginConfig(args *GetPluginConfigArgs, resp *GetPlu
 	resp.Exists = true
 	resp.Config = cfg
 	return nil
+}
+
+func (s *frameRPCServer) UpgradePluginConfig(args *UpgradePluginConfigArgs, resp *UpgradePluginConfigResp) error {
+	_ = resp
+	if s == nil || s.Frame == nil || args == nil || args.ID == "" {
+		return nil
+	}
+	return s.Frame.UpgradePluginConfig(args.ID, args.Config)
+}
+
+func (s *frameRPCServer) UpgradePluginFullConfig(args *UpgradePluginFullConfigArgs, resp *UpgradePluginFullConfigResp) error {
+	_ = resp
+	if s == nil || s.Frame == nil || args == nil || args.ID == "" {
+		return nil
+	}
+	return s.Frame.UpgradePluginFullConfig(args.ID, args.Config)
 }
 
 func (s *frameRPCServer) RegisterWhenActivate(args *RegisterWhenActivateArgs, resp *RegisterWhenActivateResp) error {
@@ -393,6 +423,27 @@ func (c *frameRPCClient) GetPluginConfig(id string) (sdkdefine.PluginConfig, boo
 		return sdkdefine.PluginConfig{}, false
 	}
 	return resp.Config, true
+}
+
+func (c *frameRPCClient) UpgradePluginConfig(id string, config map[string]interface{}) error {
+	if c == nil || c.c == nil || id == "" {
+		return nil
+	}
+	if config == nil {
+		config = map[string]interface{}{}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.c.Call("Plugin.UpgradePluginConfig", &UpgradePluginConfigArgs{ID: id, Config: config}, &UpgradePluginConfigResp{})
+}
+
+func (c *frameRPCClient) UpgradePluginFullConfig(id string, config sdkdefine.PluginConfig) error {
+	if c == nil || c.c == nil || id == "" {
+		return nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.c.Call("Plugin.UpgradePluginFullConfig", &UpgradePluginFullConfigArgs{ID: id, Config: config}, &UpgradePluginFullConfigResp{})
 }
 
 func (c *frameRPCClient) RegisterWhenActivate(handler func()) (string, error) {
