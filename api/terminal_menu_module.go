@@ -23,6 +23,7 @@ type TerminalMenuModule interface {
 	Name() string
 
 	RegisterTerminalMenuEntry(entry *TerminalMenuEntry) error
+	RemoveTerminalMenuEntry(entry *TerminalMenuEntry) bool
 	PublishTerminalCall(line string)
 	PublishPopBackendMenu()
 

@@ -46,6 +46,7 @@ func fromTerminalMenuEntryWire(w TerminalMenuEntryWire) api.TerminalMenuEntry {
 }
 
 type TerminalMenuRegisterEntryArgs struct {
+	EntryID         string
 	Entry           TerminalMenuEntryWire
 	TriggerBrokerID uint32
 }
@@ -246,6 +247,10 @@ type TerminalMenuTriggerEntryArgs struct {
 	Args    []string
 }
 
+type TerminalMenuRemoveEntryArgs struct {
+	EntryID string
+}
+
 type TerminalMenuModuleRPCServer struct {
 	Impl   api.TerminalMenuModule
 	broker *plugin.MuxBroker
@@ -253,6 +258,8 @@ type TerminalMenuModuleRPCServer struct {
 	mu            sync.Mutex
 	entrySeq      uint64
 	entryTriggers map[string]func([]string)
+
+	registeredEntries map[string]*api.TerminalMenuEntry
 }
 
 func (s *TerminalMenuModuleRPCServer) Name(_ *Empty, resp *TerminalMenuModuleNameResp) error {
@@ -271,6 +278,9 @@ func (s *TerminalMenuModuleRPCServer) RegisterMenuEntry(args *TerminalMenuRegist
 	if s == nil || s.Impl == nil || s.broker == nil || args == nil {
 		return nil
 	}
+	if args.EntryID == "" {
+		return errors.New("TerminalMenuModuleRPCServer.RegisterMenuEntry: entry id is empty")
+	}
 	if args.TriggerBrokerID == 0 {
 		return errors.New("TerminalMenuModuleRPCServer.RegisterMenuEntry: trigger broker id is 0")
 	}
@@ -285,7 +295,17 @@ func (s *TerminalMenuModuleRPCServer) RegisterMenuEntry(args *TerminalMenuRegist
 	entry.OnTrigger = func(a []string) {
 		_ = cb.OnTrigger(a)
 	}
-	return s.Impl.RegisterTerminalMenuEntry(&entry)
+	if err := s.Impl.RegisterTerminalMenuEntry(&entry); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	if s.registeredEntries == nil {
+		s.registeredEntries = make(map[string]*api.TerminalMenuEntry)
+	}
+	s.registeredEntries[args.EntryID] = &entry
+	s.mu.Unlock()
+	return nil
 }
 
 func (s *TerminalMenuModuleRPCServer) PublishTerminalCall(args *TerminalMenuLineEvent, _ *Empty) error {
@@ -457,10 +477,35 @@ func (s *TerminalMenuModuleRPCServer) TriggerMenuEntry(args *TerminalMenuTrigger
 	return nil
 }
 
+func (s *TerminalMenuModuleRPCServer) RemoveMenuEntry(args *TerminalMenuRemoveEntryArgs, resp *BoolResp) error {
+	if s == nil || s.Impl == nil || args == nil || args.EntryID == "" {
+		return nil
+	}
+	s.mu.Lock()
+	entry := s.registeredEntries[args.EntryID]
+	delete(s.registeredEntries, args.EntryID)
+	s.mu.Unlock()
+	if entry == nil {
+		if resp != nil {
+			resp.OK = false
+		}
+		return nil
+	}
+	ok := s.Impl.RemoveTerminalMenuEntry(entry)
+	if resp != nil {
+		resp.OK = ok
+	}
+	return nil
+}
+
 type terminalMenuModuleRPCClient struct {
 	c      *rpc.Client
 	broker *plugin.MuxBroker
 	mu     sync.Mutex
+
+	entrySeq uint64
+	entryMu  sync.Mutex
+	entries  map[*api.TerminalMenuEntry]string
 }
 
 func newTerminalMenuModuleRPCClient(conn net.Conn, broker *plugin.MuxBroker) api.TerminalMenuModule {
@@ -489,9 +534,45 @@ func (c *terminalMenuModuleRPCClient) RegisterTerminalMenuEntry(entry *api.Termi
 	cbID := c.broker.NextId()
 	go acceptAndServeMuxBroker(c.broker, cbID, &terminalMenuTriggerCallbackServer{handler: entry.OnTrigger})
 
+	entryID := fmt.Sprintf("entry:%d", atomic.AddUint64(&c.entrySeq, 1))
+	c.entryMu.Lock()
+	if c.entries == nil {
+		c.entries = make(map[*api.TerminalMenuEntry]string)
+	}
+	c.entries[entry] = entryID
+	c.entryMu.Unlock()
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.c.Call("Plugin.RegisterMenuEntry", &TerminalMenuRegisterEntryArgs{Entry: toTerminalMenuEntryWire(entry), TriggerBrokerID: cbID}, &Empty{})
+	return c.c.Call("Plugin.RegisterMenuEntry", &TerminalMenuRegisterEntryArgs{EntryID: entryID, Entry: toTerminalMenuEntryWire(entry), TriggerBrokerID: cbID}, &Empty{})
+}
+
+func (c *terminalMenuModuleRPCClient) RemoveTerminalMenuEntry(entry *api.TerminalMenuEntry) bool {
+	if c == nil || c.c == nil || entry == nil {
+		return false
+	}
+	c.entryMu.Lock()
+	entryID := ""
+	if c.entries != nil {
+		entryID = c.entries[entry]
+	}
+	c.entryMu.Unlock()
+	if entryID == "" {
+		return false
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var resp BoolResp
+	if err := c.c.Call("Plugin.RemoveMenuEntry", &TerminalMenuRemoveEntryArgs{EntryID: entryID}, &resp); err != nil {
+		return false
+	}
+	if resp.OK {
+		c.entryMu.Lock()
+		delete(c.entries, entry)
+		c.entryMu.Unlock()
+	}
+	return resp.OK
 }
 
 func (c *terminalMenuModuleRPCClient) PublishTerminalCall(line string) {
