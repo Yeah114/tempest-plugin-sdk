@@ -13,5 +13,6 @@ const (
 
 type PlayerChangeEvent struct {
 	UUID      uuid.UUID
+	Name      string
 	EventType string
 }
