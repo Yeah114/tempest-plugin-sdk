@@ -9,6 +9,7 @@ type PlayersModule interface {
 	GetAllOnlinePlayers(ctx context.Context) ([]PlayerKit, error)
 	GetPlayerByName(ctx context.Context, name string) (PlayerKit, error)
 	GetPlayerByUUID(ctx context.Context, uuid string) (PlayerKit, error)
+	GetPlayerByEntityRuntimeID(ctx context.Context, runtimeID uint64) (PlayerKit, error)
 
 	RegisterWhenPlayerChange(handler func(event *PlayerChangeEvent)) (string, error)
 	UnregisterWhenPlayerChange(listenerID string) bool

@@ -19,6 +19,7 @@ type PlayersModuleNameResp struct {
 type PlayersGetPlayerArgs struct {
 	UUID      string
 	Name      string
+	RuntimeID uint64
 	TimeoutMs int64
 }
 
@@ -169,6 +170,31 @@ func (s *PlayersModuleRPCServer) GetPlayerByName(args *PlayersGetPlayerArgs, res
 	ctx, cancel := ctxFromTimeoutMs(args.TimeoutMs)
 	defer cancel()
 	kit, err := s.Impl.GetPlayerByName(ctx, args.Name)
+	if err != nil {
+		return err
+	}
+	if kit == nil {
+		return nil
+	}
+	id := s.broker.NextId()
+	go acceptAndServeMuxBroker(s.broker, id, &PlayerKitRPCServer{Impl: kit})
+	resp.Exists = true
+	resp.PlayerBrokerID = id
+	return nil
+}
+
+func (s *PlayersModuleRPCServer) GetPlayerByEntityRuntimeID(args *PlayersGetPlayerArgs, resp *PlayersGetPlayerResp) error {
+	if resp == nil {
+		return nil
+	}
+	resp.Exists = false
+	resp.PlayerBrokerID = 0
+	if s == nil || s.Impl == nil || s.broker == nil || args == nil {
+		return nil
+	}
+	ctx, cancel := ctxFromTimeoutMs(args.TimeoutMs)
+	defer cancel()
+	kit, err := s.Impl.GetPlayerByEntityRuntimeID(ctx, args.RuntimeID)
 	if err != nil {
 		return err
 	}
@@ -394,6 +420,28 @@ func (c *playersModuleRPCClient) GetPlayerByUUID(ctx context.Context, uuid strin
 	c.mu.Lock()
 	var resp PlayersGetPlayerResp
 	err := c.c.Call("Plugin.GetPlayerByUUID", &PlayersGetPlayerArgs{UUID: uuid, TimeoutMs: timeoutMs}, &resp)
+	c.mu.Unlock()
+	if err != nil {
+		return nil, err
+	}
+	if !resp.Exists || resp.PlayerBrokerID == 0 {
+		return nil, nil
+	}
+	conn, err := c.broker.Dial(resp.PlayerBrokerID)
+	if err != nil {
+		return nil, err
+	}
+	return newPlayerKitRPCClient(conn), nil
+}
+
+func (c *playersModuleRPCClient) GetPlayerByEntityRuntimeID(ctx context.Context, runtimeID uint64) (api.PlayerKit, error) {
+	if c == nil || c.c == nil || c.broker == nil {
+		return nil, errors.New("playersModuleRPCClient.GetPlayerByEntityRuntimeID: client is not initialised")
+	}
+	timeoutMs := timeoutMsFromContext(ctx)
+	c.mu.Lock()
+	var resp PlayersGetPlayerResp
+	err := c.c.Call("Plugin.GetPlayerByEntityRuntimeID", &PlayersGetPlayerArgs{RuntimeID: runtimeID, TimeoutMs: timeoutMs}, &resp)
 	c.mu.Unlock()
 	if err != nil {
 		return nil, err
