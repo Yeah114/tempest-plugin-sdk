@@ -6,6 +6,8 @@ import (
 	"github.com/Yeah114/tempest-plugin-sdk/define"
 )
 
+const NameBrainModule = "brain"
+
 type BrainModule interface {
 	Name() string
 

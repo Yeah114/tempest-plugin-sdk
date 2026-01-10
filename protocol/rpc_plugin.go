@@ -220,6 +220,13 @@ func (s *frameRPCServer) GetModule(args *GetModuleArgs, resp *GetModuleResp) err
 		go acceptAndServeMuxBroker(s.broker, id, &StoragePathModuleRPCServer{Impl: spMod})
 		resp.ModuleKind = api.NameStoragePathModule
 		resp.ModuleBrokerID = id
+		return nil
+	}
+	if brainMod, ok := any(mod).(api.BrainModule); ok {
+		id := s.broker.NextId()
+		go acceptAndServeMuxBroker(s.broker, id, &BrainModuleRPCServer{Impl: brainMod, broker: s.broker})
+		resp.ModuleKind = api.NameBrainModule
+		resp.ModuleBrokerID = id
 	}
 	return nil
 }
@@ -397,6 +404,10 @@ func (c *frameRPCClient) GetModule(name string) (sdkdefine.Module, bool) {
 				}
 			case api.NameStoragePathModule:
 				if m := newStoragePathModuleRPCClient(conn); m != nil {
+					return m, true
+				}
+			case api.NameBrainModule:
+				if m := newBrainModuleRPCClient(conn, c.broker); m != nil {
 					return m, true
 				}
 			default:
