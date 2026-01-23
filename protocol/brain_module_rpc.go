@@ -94,6 +94,13 @@ func (s *BrainModuleRPCServer) EnableDaemon(args *BrainEnableDaemonArgs, resp *B
 		go acceptAndServeMuxBroker(s.broker, bid, &ScoreboardDaemonRPCServer{Impl: sb, broker: s.broker})
 		return nil
 	}
+	if ck, ok := any(dmn).(api.ChunkDaemon); ok {
+		resp.DaemonExists = true
+		resp.DaemonKind = "chunk"
+		resp.DaemonBrokerID = bid
+		go acceptAndServeMuxBroker(s.broker, bid, &ChunkDaemonRPCServer{Impl: ck, broker: s.broker})
+		return nil
+	}
 
 	resp.DaemonExists = true
 	resp.DaemonKind = dmn.Name()
@@ -178,6 +185,13 @@ func (c *brainModuleRPCClient) EnableDaemon(ctx context.Context, name string, co
 		}
 		_ = conn.Close()
 		return resp.ActualConfig, nil, errors.New("brainModuleRPCClient.EnableDaemon: failed to create scoreboard daemon client")
+	}
+	if isDaemonKindChunk(resp.DaemonKind) {
+		if d := newChunkDaemonRPCClient(conn, c.broker); d != nil {
+			return resp.ActualConfig, d, nil
+		}
+		_ = conn.Close()
+		return resp.ActualConfig, nil, errors.New("brainModuleRPCClient.EnableDaemon: failed to create chunk daemon client")
 	}
 
 	if d := newDaemonRPCClient(conn); d != nil {

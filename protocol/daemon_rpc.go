@@ -118,3 +118,7 @@ func (c *daemonRPCClient) Config() map[string]interface{} {
 func isDaemonKindScoreboard(kind string) bool {
 	return strings.EqualFold(strings.TrimSpace(kind), "scoreboard")
 }
+
+func isDaemonKindChunk(kind string) bool {
+	return strings.EqualFold(strings.TrimSpace(kind), "chunk")
+}
