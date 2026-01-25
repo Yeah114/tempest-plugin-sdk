@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Yeah114/tempest-plugin-sdk/api"
+	"github.com/Yeah114/EmptyDea-plugin-sdk/api"
 )
 
 type CommandsModuleNameResp struct {

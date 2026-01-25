@@ -1,7 +1,7 @@
 package api
 
 // NameChatModule is the module name used by Frame.GetModule / Frame.ListModules.
-// It must match the host module name (tempest frame/module/common/name.go).
+// It must match the host module name (EmptyDea frame/module/common/name.go).
 const NameChatModule = "chat"
 
 type ChatModule interface {

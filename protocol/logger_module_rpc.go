@@ -5,7 +5,7 @@ import (
 	"net/rpc"
 	"sync"
 
-	"github.com/Yeah114/tempest-plugin-sdk/api"
+	"github.com/Yeah114/EmptyDea-plugin-sdk/api"
 )
 
 type LoggerModuleNameResp struct {

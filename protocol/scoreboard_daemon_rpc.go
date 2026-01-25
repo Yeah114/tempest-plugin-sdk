@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 
-	"github.com/Yeah114/tempest-plugin-sdk/api"
+	"github.com/Yeah114/EmptyDea-plugin-sdk/api"
 )
 
 type ScoreboardDaemonNameResp struct {

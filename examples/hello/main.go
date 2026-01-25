@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"context"
+	"fmt"
 
+	"github.com/Yeah114/EmptyDea-plugin-sdk/api"
+	"github.com/Yeah114/EmptyDea-plugin-sdk/protocol"
 	"github.com/mitchellh/mapstructure"
-	"github.com/Yeah114/tempest-plugin-sdk/api"
-	"github.com/Yeah114/tempest-plugin-sdk/protocol"
 )
 
 type HelloPluginConfig struct {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	sdkdefine "github.com/Yeah114/tempest-plugin-sdk/define"
+	sdkdefine "github.com/Yeah114/EmptyDea-plugin-sdk/define"
 )
 
 type DaemonNameResp struct {

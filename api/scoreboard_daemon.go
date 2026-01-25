@@ -15,7 +15,7 @@ type PlayerScoreQueryResult struct {
 type RankQueryResult struct {
 	PlayerUUID string `json:"PlayerUID"`
 	PlayerName string `json:"PlayerName"`
-	Score int         `json:"Score"`
+	Score      int    `json:"Score"`
 }
 type ScoreboardDaemon interface {
 	Name() (name string)

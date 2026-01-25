@@ -1,6 +1,6 @@
 package api
 
-import "github.com/Yeah114/tempest-plugin-sdk/define"
+import "github.com/Yeah114/EmptyDea-plugin-sdk/define"
 
 type PluginTool struct {
 	frame          define.Frame

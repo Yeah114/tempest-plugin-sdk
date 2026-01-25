@@ -1,6 +1,6 @@
-# tempest-plugin-sdk
+# EmptyDea-plugin-sdk
 
-这是 Tempest 的精简 Go 插件 SDK（给 `DynamicLoader` 用）。
+这是 EmptyDea 的精简 Go 插件 SDK（给 `DynamicLoader` 用）。
 
 ## DynamicLoader 目录约定
 

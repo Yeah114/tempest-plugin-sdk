@@ -9,8 +9,8 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 
-	"github.com/Yeah114/tempest-plugin-sdk/api"
-	sdkdefine "github.com/Yeah114/tempest-plugin-sdk/define"
+	"github.com/Yeah114/EmptyDea-plugin-sdk/api"
+	sdkdefine "github.com/Yeah114/EmptyDea-plugin-sdk/define"
 )
 
 type BrainModuleNameResp struct {
